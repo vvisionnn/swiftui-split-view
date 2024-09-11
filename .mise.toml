@@ -1,0 +1,12 @@
+[tools]
+swiftformat = "latest"
+
+[settings]
+jobs = 6
+http_timeout = 30
+experimental = true
+
+[tasks.format]
+run = "swiftformat ."
+description = "Format Swift code"
+alias = "f"
