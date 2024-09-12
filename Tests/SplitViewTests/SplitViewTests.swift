@@ -1,4 +1,4 @@
-@testable import swiftui_split_view
+@testable import SplitView
 import Testing
 
 @Test func example() async throws {
