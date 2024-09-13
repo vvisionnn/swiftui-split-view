@@ -33,10 +33,13 @@ public struct SplitView<Sidebar: View, Content: View>: View {
 					.frame(width: sidebarWidth)
 					.offset(x: offset - sidebarWidth)
 					.overlay(alignment: .trailing) {
-						Divider()
+						Rectangle()
+							.frame(width: 1)
+							.frame(maxHeight: .infinity)
 							.foregroundStyle(Color(uiColor: .separator))
 							.ignoresSafeArea()
 					}
+					.disabled(progress != 0 && progress != 1)
 				content()
 					.overlay(content: {
 						Rectangle()
@@ -46,7 +49,7 @@ public struct SplitView<Sidebar: View, Content: View>: View {
 					})
 					.offset(x: offset)
 			}
-			.gesture(
+			.simultaneousGesture(
 				DragGesture()
 					.onChanged { val in
 						let translation = val.translation.width + lastDragOffset
@@ -116,9 +119,21 @@ extension SplitView {
 
 #Preview("Swipe Show Sidebar", body: {
 	SplitView(style: .swipeShow) {
-		Rectangle()
-			.foregroundStyle(Color(uiColor: .systemGreen))
-			.ignoresSafeArea()
+		ScrollView(.vertical) {
+			LazyVStack {
+				ForEach(0 ..< 100) { index in
+					Button(action: {
+						debugPrint("item index: \(index)")
+					}) {
+						Text("Item \(index)")
+							.foregroundStyle(Color(uiColor: .label))
+							.frame(maxWidth: .infinity)
+							.padding()
+							.background(Color(uiColor: .secondarySystemBackground))
+					}
+				}
+			}
+		}
 	} content: {
 		Rectangle()
 			.foregroundStyle(Color(uiColor: .systemMint))
