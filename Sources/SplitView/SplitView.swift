@@ -7,17 +7,17 @@ public struct SplitView<Sidebar: View, Content: View>: View {
 	@State private var progress: Double = .zero
 	@State var sidebar: @MainActor () -> Sidebar
 	@State var content: @MainActor () -> Content
-	@State var sidebarWidth: Double
+	@Binding var sidebarWidth: Double
 	@State var style: Style
 
 	@MainActor
 	public init(
 		style: Style = .swipeShow,
-		sidebarWidth: Double = 270,
+		sidebarWidth: Binding<Double> = .constant(270),
 		@ViewBuilder sidebar: @escaping @MainActor () -> Sidebar,
 		@ViewBuilder content: @escaping @MainActor () -> Content
 	) {
-		self.sidebarWidth = sidebarWidth
+		self._sidebarWidth = sidebarWidth
 		self.style = style
 		self.sidebar = sidebar
 		self.content = content
@@ -167,70 +167,6 @@ extension SplitView {
 	}
 }
 
-struct DragGestureViewModifier: ViewModifier {
-	@GestureState private var isDragging: Bool = false
-	@State var gestureState: GestureStatus = .idle
-
-	var onStart: (() -> Void)?
-	var onUpdate: ((DragGesture.Value) -> Void)?
-	var onEnd: ((DragGesture.Value) -> Void)?
-	var onCancel: (() -> Void)?
-
-	func body(content: Content) -> some View {
-		content
-			.simultaneousGesture(
-				DragGesture()
-					.updating($isDragging) { _, isDragging, _ in
-						isDragging = true
-					}
-					.onChanged(onDragChange(_:))
-					.onEnded(onDragEnded(_:))
-			)
-			.onChange(of: gestureState) { state in
-				guard state == .started else { return }
-				gestureState = .active
-			}
-			.onChange(of: isDragging) { value in
-				if value, gestureState != .started {
-					gestureState = .started
-					onStart?()
-				} else if !value, gestureState != .ended {
-					gestureState = .cancelled
-					onCancel?()
-				}
-			}
-	}
-
-	func onDragChange(_ value: DragGesture.Value) {
-		guard gestureState == .started || gestureState == .active else { return }
-		onUpdate?(value)
-	}
-
-	func onDragEnded(_ value: DragGesture.Value) {
-		gestureState = .ended
-		onEnd?(value)
-	}
-
-	enum GestureStatus: Equatable {
-		case idle
-		case started
-		case active
-		case ended
-		case cancelled
-	}
-}
-
-extension View {
-	func dragGesture(
-		onStart: (() -> Void)? = nil,
-		onUpdate: ((DragGesture.Value) -> Void)? = nil,
-		onEnd: ((DragGesture.Value) -> Void)? = nil,
-		onCancel: (() -> Void)? = nil
-	) -> some View {
-		modifier(DragGestureViewModifier(onStart: onStart, onUpdate: onUpdate, onEnd: onEnd, onCancel: onCancel))
-	}
-}
-
 #Preview("Always Show Sidebar", body: {
 	SplitView(style: .alwaysShow) {
 		Rectangle()
@@ -270,3 +206,70 @@ extension View {
 			}
 	}
 })
+
+#if DEBUG
+struct SidebarAdaptivePreviewView: View {
+	@State var sidebarWidth: Double = 270
+	@Namespace var namespace
+	var body: some View {
+		SplitView(style: .alwaysShow, sidebarWidth: $sidebarWidth) {
+			NavigationStack {
+				ScrollView(.vertical) {
+					LazyVStack {
+						ForEach(0 ..< 100) { index in
+							Button(action: {
+								withAnimation(.snappy(duration: 1)) {
+									sidebarWidth = sidebarWidth == 270 ? 84 : 270
+								}
+							}) {
+								ZStack(alignment: .center) {
+									if sidebarWidth != 270 {
+										HStack {
+											Image(systemName: "gear")
+												.transition(.opacity)
+												.matchedGeometryEffect(id: "icon-\(index)", in: namespace)
+										}
+										.padding()
+									} else {
+										HStack {
+											Image(systemName: "gear")
+												.transition(.opacity)
+												.matchedGeometryEffect(id: "icon-\(index)", in: namespace)
+											
+											Text("Item \(index)")
+												.lineLimit(1)
+											
+											Spacer()
+										}
+										.background(Color.red)
+										.foregroundStyle(Color(uiColor: .label))
+										.frame(minWidth: .zero, maxWidth: .infinity)
+										.padding()
+									}
+								}
+								.background(
+									RoundedRectangle(cornerRadius: 12, style: .continuous)
+										.foregroundStyle(Color(uiColor: .secondarySystemBackground))
+								)
+								.padding(.horizontal)
+							}
+						}
+					}
+				}
+			}
+		} content: {
+			Rectangle()
+				.foregroundStyle(Color(uiColor: .systemMint))
+				.ignoresSafeArea()
+				.overlay {
+					Text("Content")
+				}
+				.frame(maxWidth: .infinity)
+		}
+	}
+}
+
+#Preview("Always Show Sidebar Adaptive", body: {
+	SidebarAdaptivePreviewView()
+})
+#endif

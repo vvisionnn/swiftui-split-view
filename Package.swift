@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
 	name: "swiftui-split-view",
-	platforms: [.iOS(.v16), .macOS(.v13)],
+	platforms: [.iOS(.v16)],
 	products: [
 		.library(
 			name: "SplitView",
